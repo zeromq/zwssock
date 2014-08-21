@@ -352,8 +352,7 @@ s_agent_handle_data(agent_t *self)
 
 	zframe_t* address;
 
-	if (client) {
-		//  Encrypt and send all frames of request
+	if (client) {		
 		//  Each frame is a full ZMQ message with identity frame
 		while (zmsg_size(request)) {
 			zframe_t *receivedFrame = zmsg_pop(request);
@@ -390,9 +389,23 @@ s_agent_handle_data(agent_t *self)
 			{
 				outgoingData[1] |= (byte)(payloadLength & 127);
 			}
+			else if (payloadLength <= 0xFFFF) // maximum size of short
+			{
+				outgoingData[1] |= 126;
+				outgoingData[2] = (payloadLength >> 8) & 0xFF;
+				outgoingData[3] = payloadLength & 0xFF;
+			}
 			else
 			{
-				// TODO: implement large payloads
+				outgoingData[1] |= 127;
+				outgoingData[2] = 0;
+				outgoingData[3] = 0;
+				outgoingData[4] = 0;
+				outgoingData[5] = 0;
+				outgoingData[6] = (payloadLength >> 24) & 0xFF;
+				outgoingData[7] = (payloadLength >> 16) & 0xFF;
+				outgoingData[8] = (payloadLength >> 8) & 0xFF;
+				outgoingData[9] = payloadLength & 0xFF;
 			}
 
 			// more byte
