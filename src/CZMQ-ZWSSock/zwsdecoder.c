@@ -74,13 +74,7 @@ void zwsdecoder_process_buffer(zwsdecoder_t *self, zframe_t* data)
 		{
 		case error:
 			return;
-		case begin_payload:
-
-			if (self->payload_length == 0)
-			{
-				invoke_new_message(self);
-				break;
-			}
+		case begin_payload:		
 
 			self->payload_index = 0;
 			self->payload = zmalloc(sizeof(byte) * self->payload_length);
@@ -265,7 +259,16 @@ void zwsdecoder_process_byte(zwsdecoder_t *self, byte b)
 
 		self->payload_length--;
 
-		self->state = begin_payload;
+		if (self->payload_length == 0)
+		{
+			self->state = new_message;
+			self->payload = NULL;
+
+			invoke_new_message(self);
+		}
+		else		
+			self->state = begin_payload;
+
 		break;
 	}
 }
@@ -282,7 +285,17 @@ state_t zwsdecoder_next_state(zwsdecoder_t *self)
 	}
 	else
 	{
-		return begin_payload;
+		if (self->payload_length == 0)
+		{
+			self->payload = NULL;
+			
+			invoke_new_message(self);
+
+			return new_message;
+		}
+		else
+			return begin_payload;
+		
 	}
 }
 
