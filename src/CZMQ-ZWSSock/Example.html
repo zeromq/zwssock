@@ -1,28 +1,37 @@
 <html>
-    <script src="https://rawgit.com/zeromq/JSMQ/master/JSMQ.js"></script>
+<head>
+    <title></title>
+
+    <!--<script src="https://rawgit.com/zeromq/JSMQ/master/JSMQ.js"></script>-->
+    <script src="C:\git\JSMQ\JSMQ.js"></script>
+
     <script>
         var dealer = new Dealer();
         dealer.connect("ws://localhost");
 
         // we must wait for the dealer to be connected before we can send messages, any messages we are trying to send
         // while the dealer is not connected will be dropped
-        dealer.sendReady = function() {
+        dealer.sendReady = function () {
             document.getElementById("sendButton").disabled = "";
         };
-        
+
         dealer.onMessage = function (message) {
             // the response from the server
-            alert(message[0]);
+            alert(message.popString());
         };
 
         function send() {
-            dealer.send(document.getElementById("messageTextBox").value);
+            var message = new JSMQMessage();
+            message.addString(document.getElementById("messageTextBox").value);
+
+            dealer.send(message);
         }
     </script>
-    <body>                        
-        <label>Message:</label><input id="messageTextBox" value="" />
-        <button id="sendButton" disabled="disabled" onclick="javascript:send();">
-            Send
-        </button>                    
-    </body>
+</head>
+<body>
+    <label>Message:</label><input id="messageTextBox" value="" />
+    <button id="sendButton" disabled="disabled" onclick="javascript:send();">
+        Send
+    </button>
+</body>
 </html>

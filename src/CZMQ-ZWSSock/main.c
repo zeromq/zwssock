@@ -33,7 +33,7 @@ void main()
 		msg = zmsg_new();
 
 		zmsg_push(msg, id);
-		zmsg_addstr(msg, "You just sent ZWS message");
+		zmsg_addstr(msg, "hello back");
 
 		zwssock_send(sock, &msg);
 	}

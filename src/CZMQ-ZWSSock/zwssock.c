@@ -378,9 +378,8 @@ s_agent_handle_data(agent_t *self)
 			}
 
 			byte* outgoingData = (byte*)zmalloc(frameSize);
-
-			// TODO: soon ZWS will be binary protocol instead of text
-			outgoingData[0] = (byte)0x81; // Text and Final      
+			
+			outgoingData[0] = (byte)0x82; // Binary and Final      
 
 			// No mask
 			outgoingData[1] = 0x00;
@@ -409,7 +408,7 @@ s_agent_handle_data(agent_t *self)
 			}
 
 			// more byte
-			outgoingData[payloadStartIndex] = (byte)(more ? '1' : '0');
+			outgoingData[payloadStartIndex] = (byte)(more ? 1 : 0);
 			payloadStartIndex++;
 
 			// payload

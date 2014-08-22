@@ -2,7 +2,7 @@
 
 typedef enum
 {
-	opcode_continuation = 0, opcode_text = 0x01, opcode_binary = 0x03, opcode_close = 0x08, opcode_ping = 0x09, opcode_pong = 0xA
+	opcode_continuation = 0, opcode_text = 0x01, opcode_binary = 0x02, opcode_close = 0x08, opcode_ping = 0x09, opcode_pong = 0xA
 } opcode_t;
 
 typedef enum
@@ -94,7 +94,7 @@ void zwsdecoder_process_buffer(zwsdecoder_t *self, zframe_t* data)
 			{
 				for (int j = self->payload_index; j < self->payload_index + bytes_to_read; j++)
 				{
-					if (self->opcode == opcode_text)
+					if (self->opcode == opcode_binary)
 					{
 						// because the first byte is the more bit we always add + 1 to the index 
 						// when retrieving the mask byte
@@ -147,7 +147,7 @@ void zwsdecoder_process_byte(zwsdecoder_t *self, byte b)
 			self->state = error;
 		}
 		// check that the opcode is supported
-		else if (self->opcode != opcode_text && self->opcode != opcode_close && self->opcode != opcode_ping && self->opcode != opcode_pong)
+		else if (self->opcode != opcode_binary && self->opcode != opcode_close && self->opcode != opcode_ping && self->opcode != opcode_pong)
 		{
 			self->state = error;
 		}
@@ -250,11 +250,11 @@ void zwsdecoder_process_byte(zwsdecoder_t *self, byte b)
 
 		if (self->is_masked)
 		{
-			self->more = (b ^ self->mask[0]) == '1';
+			self->more = (b ^ self->mask[0]) == 1;
 		}
 		else
 		{
-			self->more = b == '1';
+			self->more = b == 1;
 		}
 
 		self->payload_length--;
@@ -279,7 +279,7 @@ state_t zwsdecoder_next_state(zwsdecoder_t *self)
 	{
 		return mask;
 	}
-	else if (self->opcode == opcode_text)
+	else if (self->opcode == opcode_binary)
 	{
 		return more_byte;
 	}
@@ -303,7 +303,7 @@ void invoke_new_message(zwsdecoder_t *self)
 {
 	switch (self->opcode)
 	{
-	case opcode_text:
+	case opcode_binary:
 		self->message_cb(self->tag, self->payload, self->payload_length, self->more);
 		break;
 	case opcode_close:
