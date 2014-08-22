@@ -2,7 +2,7 @@ TARGET= zwstest
 SRCS = main.c  zwsdecoder.c  zwshandshake.c  zwssock.c
 CC = gcc
 DEBUG = -g
-MILITANT = #-Werror
+MILITANT = -Werror
 CFLAGS= -std=gnu99  -Wall $(shell pkg-config --cflags libczmq) $(DEBUG) $(MILITANT)
 LDFLAGS = -Wall $(DEBUG)
 LIBS =  $(shell pkg-config --libs libczmq)
@@ -32,3 +32,5 @@ $(OBJDIR)/%.o : %.c
 clean:
 	rm -rf $(DEPDIR) $(OBJDIR) $(TARGET)
 
+etags:
+	etags *.c *.h
