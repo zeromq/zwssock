@@ -268,6 +268,11 @@ static void zwsdecoder_process_byte(zwsdecoder_t *self, byte b)
 			self->state = begin_payload;
 
 	    break;
+	case begin_payload:
+	case payload:
+	case error:
+	    ;
+	    // XXXX unhandled
 	}
 }
 
