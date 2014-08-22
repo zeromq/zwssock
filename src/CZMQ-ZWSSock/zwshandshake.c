@@ -339,7 +339,7 @@ zframe_t* zwshandshake_get_response(zwshandshake_t *self)
 	strcat(plain, magic_string);
 
 	zdigest_t* digest = zdigest_new();
-	zdigest_update(digest, plain, len);
+	zdigest_update(digest, (byte *) plain, len);
 	
 	byte* hash = zdigest_data(digest);
 		
