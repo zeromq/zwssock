@@ -109,7 +109,7 @@ bool zwshandshake_parse_request(zwshandshake_t *self, zframe_t* data)
 				self->state = error;
 			break;
 		case request_line_GET_space:
-			if (c == '\r0' || c == '\n')
+			if (c == '\r' || c == '\n')
 				self->state = error;
 			// TODO: instead of check what is not allowed check what is allowed
 			if (c != ' ')
@@ -118,7 +118,7 @@ bool zwshandshake_parse_request(zwshandshake_t *self, zframe_t* data)
 				self->state = request_line_GET_space;
 			break;
 		case request_line_resource:
-			if (c == '\r0' || c == '\n')
+			if (c == '\r' || c == '\n')
 				self->state = error;
 			else if (c == ' ')
 				self->state = request_line_resource_space;
@@ -201,7 +201,7 @@ bool zwshandshake_parse_request(zwshandshake_t *self, zframe_t* data)
 			}
 			break;
 		case header_field_name:
-			if (c == '\r0' || c == '\n')
+			if (c == '\r' || c == '\n')
 				self->state = error;
 			else if (c == ':')
 			{
@@ -287,7 +287,7 @@ bool zwshandshake_parse_request(zwshandshake_t *self, zframe_t* data)
 bool zwshandshake_validate(zwshandshake_t *self)
 {
 	// TODO: validate that the request is valid
-	return TRUE;
+	return true;
 }
 
 int encode_base64(uint8_t *in, int in_len, char* out, int out_len)
@@ -339,7 +339,7 @@ zframe_t* zwshandshake_get_response(zwshandshake_t *self)
 	strcat(plain, magic_string);
 
 	zdigest_t* digest = zdigest_new();
-	zdigest_update(digest, plain, len);
+	zdigest_update(digest, (byte *) plain, len);
 	
 	byte* hash = zdigest_data(digest);
 		

@@ -3,7 +3,7 @@
 #include "zwssock.h"
 
 
-void main()
+int main(int argc, char **argv)
 {
 	zctx_t *ctx;
 	zwssock_t *sock;

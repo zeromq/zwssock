@@ -56,7 +56,7 @@ void zwssock_destroy(zwssock_t **self_p)
 int zwssock_bind(zwssock_t *self, char *endpoint)
 {
 	assert(self);
-	zstr_sendx(self->control, "BIND", endpoint, NULL);
+	return zstr_sendx(self->control, "BIND", endpoint, NULL);
 }
 
 int zwssock_send(zwssock_t *self, zmsg_t **msg_p)
@@ -219,11 +219,8 @@ void pong_received(void *tag, byte* payload, int length)
 
 static void client_data_ready(client_t * self)
 {
-	const char* keyPropertyName = "SEC-WEBSOCKET-KEY:";
-	const int toSmallLetter = 32;
 	zframe_t* data;
 	zwshandshake_t * handshake;	
-	int i;
 	
 	data = zframe_recv(self->agent->stream);
 
