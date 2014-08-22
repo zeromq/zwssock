@@ -109,7 +109,7 @@ bool zwshandshake_parse_request(zwshandshake_t *self, zframe_t* data)
 				self->state = error;
 			break;
 		case request_line_GET_space:
-			if (c == '\r0' || c == '\n')
+			if (c == '\r' || c == '\n')
 				self->state = error;
 			// TODO: instead of check what is not allowed check what is allowed
 			if (c != ' ')
@@ -118,7 +118,7 @@ bool zwshandshake_parse_request(zwshandshake_t *self, zframe_t* data)
 				self->state = request_line_GET_space;
 			break;
 		case request_line_resource:
-			if (c == '\r0' || c == '\n')
+			if (c == '\r' || c == '\n')
 				self->state = error;
 			else if (c == ' ')
 				self->state = request_line_resource_space;
@@ -201,7 +201,7 @@ bool zwshandshake_parse_request(zwshandshake_t *self, zframe_t* data)
 			}
 			break;
 		case header_field_name:
-			if (c == '\r0' || c == '\n')
+			if (c == '\r' || c == '\n')
 				self->state = error;
 			else if (c == ':')
 			{
