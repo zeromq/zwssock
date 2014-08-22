@@ -53,10 +53,8 @@ zwsdecoder_t* zwsdecoder_new(void *tag, message_callback_t message_cb, close_cal
 void zwsdecoder_destroy(zwsdecoder_t **self_p)
 {
 	zwsdecoder_t *self = *self_p;
-
 	free(self);
-
-	self_p = NULL;
+	*self_p = NULL;
 }
 
 void zwsdecoder_process_buffer(zwsdecoder_t *self, zframe_t* data)
