@@ -219,11 +219,8 @@ void pong_received(void *tag, byte* payload, int length)
 
 static void client_data_ready(client_t * self)
 {
-	const char* keyPropertyName = "SEC-WEBSOCKET-KEY:";
-	const int toSmallLetter = 32;
 	zframe_t* data;
 	zwshandshake_t * handshake;	
-	int i;
 	
 	data = zframe_recv(self->agent->stream);
 
