@@ -20,7 +20,7 @@ struct _zwsdecoder_t
 	bool is_masked;
 	byte mask[4];
 	bool more;
-	char *payload;
+	byte *payload;
 	int payload_length;
 	int payload_index;
 	void *tag;
@@ -31,9 +31,9 @@ struct _zwsdecoder_t
 };
 
 // private methods
-void zwsdecoder_process_byte(zwsdecoder_t *self, byte b);
-state_t zwsdecoder_next_state(zwsdecoder_t *self);
-void invoke_new_message(zwsdecoder_t *self);
+static void zwsdecoder_process_byte(zwsdecoder_t *self, byte b);
+static state_t zwsdecoder_next_state(zwsdecoder_t *self);
+static void invoke_new_message(zwsdecoder_t *self);
 
 
 zwsdecoder_t* zwsdecoder_new(void *tag, message_callback_t message_cb, close_callback_t close_cb, ping_callback_t ping_cb, pong_callback_t pong_cb)
@@ -129,7 +129,7 @@ void zwsdecoder_process_buffer(zwsdecoder_t *self, zframe_t* data)
 	}
 }
 
-void zwsdecoder_process_byte(zwsdecoder_t *self, byte b)
+static void zwsdecoder_process_byte(zwsdecoder_t *self, byte b)
 {
 	bool final;
 
@@ -267,11 +267,11 @@ void zwsdecoder_process_byte(zwsdecoder_t *self, byte b)
 		else		
 			self->state = begin_payload;
 
-		break;
+	    break;
 	}
 }
 
-state_t zwsdecoder_next_state(zwsdecoder_t *self)
+static state_t zwsdecoder_next_state(zwsdecoder_t *self)
 {
 	if ((self->state == long_size_8 || self->state == second_byte || self->state == short_size_2) && self->is_masked)
 	{
@@ -297,7 +297,7 @@ state_t zwsdecoder_next_state(zwsdecoder_t *self)
 	}
 }
 
-void invoke_new_message(zwsdecoder_t *self)
+static void invoke_new_message(zwsdecoder_t *self)
 {
 	switch (self->opcode)
 	{
