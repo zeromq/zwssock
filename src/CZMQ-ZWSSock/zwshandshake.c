@@ -287,7 +287,7 @@ bool zwshandshake_parse_request(zwshandshake_t *self, zframe_t* data)
 bool zwshandshake_validate(zwshandshake_t *self)
 {
 	// TODO: validate that the request is valid
-	return TRUE;
+	return true;
 }
 
 int encode_base64(uint8_t *in, int in_len, char* out, int out_len)
