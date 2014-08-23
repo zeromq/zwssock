@@ -17,14 +17,15 @@
 
         dealer.onMessage = function (message) {
             // the response from the server
-            alert(message.popString());
+            console.log(message.popString());            
         };
 
-        function send() {
-            var message = new JSMQMessage();
-            message.addString(document.getElementById("messageTextBox").value);
-
-            dealer.send(message);
+        function send() {            
+            for (var i = 0; i < 1000; i++) {
+                var message = new JSMQMessage();
+                message.addString(document.getElementById("messageTextBox").value);
+                dealer.send(message);    
+            }            
         }
     </script>
 </head>

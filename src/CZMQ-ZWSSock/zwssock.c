@@ -189,9 +189,10 @@ void router_message_received(void *tag, byte* payload, int length, bool more)
 		self->outgoing_msg = zmsg_new();
 		zmsg_addstr(self->outgoing_msg, self->hashkey);
 	}
-	
-	// TODO: does addmem copy the data or using the pointer, if copying the payload need to freed
+		
 	zmsg_addmem(self->outgoing_msg, payload, length);	
+
+	free(payload);
 
 	if (!more)
 	{
@@ -417,6 +418,7 @@ s_agent_handle_data(agent_t *self)
 			zsocket_sendmem(self->stream, outgoingData, frameSize, 0);
 
 			free(outgoingData);
+			zframe_destroy(&receivedFrame);
 
 			// TODO: check return code, on return code different than 0 or again set exception			
 		}

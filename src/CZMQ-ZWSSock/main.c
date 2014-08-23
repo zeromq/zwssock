@@ -25,7 +25,11 @@ int main(int argc, char **argv)
 
 		while (zmsg_size(msg) != 0)
 		{
-			printf("%s\n", zmsg_popstr(msg));			
+			char * str = zmsg_popstr(msg);
+
+			printf("%s\n", str);
+			
+			free(str);
 		}
 
 		zmsg_destroy(&msg);
