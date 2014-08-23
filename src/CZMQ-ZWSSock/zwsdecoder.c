@@ -321,6 +321,8 @@ static void invoke_new_message(zwsdecoder_t *self)
 	default:
 		assert(false);		
 	}
+
+	free(self->payload);
 }
 
 bool zwsdecoder_is_errored(zwsdecoder_t *self)

@@ -202,20 +202,17 @@ void router_message_received(void *tag, byte* payload, int length, bool more)
 
 void close_received(void *tag, byte* payload, int length)
 {
-	// TODO: close received
-	free(payload);
+	// TODO: close received	
 }
 
 void ping_received(void *tag, byte* payload, int length)
 {
-	// TODO: implement ping 
-	free(payload);
+	// TODO: implement ping 	
 }
 
 void pong_received(void *tag, byte* payload, int length)
 {
-	// TOOD: implement pong
-	free(payload);
+	// TOOD: implement pong	
 }
 
 static void client_data_ready(client_t * self)
