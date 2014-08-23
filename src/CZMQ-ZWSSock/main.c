@@ -4,9 +4,9 @@
 
 
 int main(int argc, char **argv)
-{
+{	
 	zctx_t *ctx;
-	zwssock_t *sock;
+	zwssock_t *sock;	
 
 	ctx = zctx_new();
 	sock = zwssock_new_router(ctx);
@@ -16,10 +16,13 @@ int main(int argc, char **argv)
 	zmsg_t* msg;
 	zframe_t *id;
 
-	while (true)
+	while (!zctx_interrupted)
 	{		
 		msg = zwssock_recv(sock);
 		
+		if (!msg)
+			break;
+
 		// first message is the routing id
 		id = zmsg_pop(msg);
 
@@ -42,7 +45,6 @@ int main(int argc, char **argv)
 		zwssock_send(sock, &msg);
 	}
 	
-	
-
-	
+	zwssock_destroy(&sock);
+	zctx_destroy(&ctx);	
 }
