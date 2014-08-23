@@ -3,11 +3,11 @@
     <title></title>
 
     <!--<script src="https://rawgit.com/zeromq/JSMQ/master/JSMQ.js"></script>-->
-    <script src="https://rawgit.com/somdoron/JSMQ/master/JSMQ.js"></script>
-    <!--<script src="C:\git\JSMQ\JSMQ.js"></script>-->
+    <!--<script src="https://rawgit.com/somdoron/JSMQ/master/JSMQ.js"></script>-->
+    <script src="C:\git\JSMQ\JSMQ.js"></script>
 
     <script>
-        var dealer = new Dealer();
+        var dealer = new JSMQ.Dealer();
         dealer.connect("ws://localhost");
 
         // we must wait for the dealer to be connected before we can send messages, any messages we are trying to send
@@ -18,15 +18,13 @@
 
         dealer.onMessage = function (message) {
             // the response from the server
-            console.log(message.popString());            
+            console.log(message.popString());
         };
 
-        function send() {            
-            for (var i = 0; i < 1000; i++) {
-                var message = new JSMQMessage();
-                message.addString(document.getElementById("messageTextBox").value);
-                dealer.send(message);    
-            }            
+        function send() {
+            var message = new JSMQ.Message();
+            message.addString(document.getElementById("messageTextBox").value);
+            dealer.send(message);
         }
     </script>
 </head>

@@ -46,6 +46,7 @@ zwsdecoder_t* zwsdecoder_new(void *tag, message_callback_t message_cb, close_cal
 	self->close_cb = close_cb;
 	self->ping_cb = ping_cb;
 	self->pong_cb = pong_cb;
+	self->payload = NULL;
 
 	return self;
 }
@@ -259,8 +260,7 @@ static void zwsdecoder_process_byte(zwsdecoder_t *self, byte b)
 
 		if (self->payload_length == 0)
 		{
-			self->state = new_message;
-			self->payload = NULL;
+			self->state = new_message;			
 
 			invoke_new_message(self);
 		}
@@ -289,9 +289,7 @@ static state_t zwsdecoder_next_state(zwsdecoder_t *self)
 	else
 	{
 		if (self->payload_length == 0)
-		{
-			self->payload = NULL;
-			
+		{						
 			invoke_new_message(self);
 
 			return new_message;
@@ -322,7 +320,11 @@ static void invoke_new_message(zwsdecoder_t *self)
 		assert(false);		
 	}
 
-	free(self->payload);
+	if (self->payload != NULL)
+	{
+		free(self->payload);
+		self->payload = NULL;
+	}
 }
 
 bool zwsdecoder_is_errored(zwsdecoder_t *self)

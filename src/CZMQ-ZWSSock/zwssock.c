@@ -192,8 +192,6 @@ void router_message_received(void *tag, byte* payload, int length, bool more)
 		
 	zmsg_addmem(self->outgoing_msg, payload, length);	
 
-	free(payload);
-
 	if (!more)
 	{
 		zmsg_send(&self->outgoing_msg, self->agent->data);
