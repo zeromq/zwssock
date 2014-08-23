@@ -416,6 +416,8 @@ s_agent_handle_data(agent_t *self)
 			zframe_send(&address, self->stream, ZFRAME_MORE);			
 			zsocket_sendmem(self->stream, outgoingData, frameSize, 0);
 
+			free(outgoingData);
+
 			// TODO: check return code, on return code different than 0 or again set exception			
 		}
 	}
