@@ -8,7 +8,7 @@
 
     <script>
         var dealer = new JSMQ.Dealer();
-        dealer.connect("ws://localhost");
+        dealer.connect("ws://localhost:8000");
 
         // we must wait for the dealer to be connected before we can send messages, any messages we are trying to send
         // while the dealer is not connected will be dropped
