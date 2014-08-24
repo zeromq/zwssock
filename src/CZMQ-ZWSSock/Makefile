@@ -13,7 +13,7 @@ DEPS := $(sort $(patsubst %.c,$(DEPDIR)/%.d,$(SRCS)))
 OTMP = $(patsubst %.c,%.o,$(wildcard *.c))
 OBJS = $(patsubst %,$(OBJDIR)/%,$(OTMP))
 
-all: clean init $(DEPS) $(OBJS)
+all: init $(DEPS) $(OBJS)
 	$(CC) -o $(TARGET) $(LDFLAGS) $(LIBS) $(OBJS)
 
 init:

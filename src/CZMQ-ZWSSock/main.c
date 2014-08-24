@@ -2,16 +2,26 @@
 
 #include "zwssock.h"
 
+static char *listen_on = "tcp://127.0.0.1:8000";
 
 int main(int argc, char **argv)
 {	
 	zctx_t *ctx;
-	zwssock_t *sock;	
+	zwssock_t *sock;
+
+	char *l =  argc > 1 ? argv[1] : listen_on;
+
+	int major, minor, patch;
+	zmq_version (&major, &minor, &patch);
+	printf("built with: ØMQ=%d.%d.%d czmq=%d.%d.%d\n",
+	       major, minor, patch,
+	       CZMQ_VERSION_MAJOR, CZMQ_VERSION_MINOR,CZMQ_VERSION_PATCH);
+
 
 	ctx = zctx_new();
 	sock = zwssock_new_router(ctx);
 
-	zwssock_bind(sock , "tcp://127.0.0.1:80");	
+	zwssock_bind(sock, l);
 
 	zmsg_t* msg;
 	zframe_t *id;
