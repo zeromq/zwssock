@@ -3,7 +3,7 @@ ZWSSock - ZeroMQ over WebSocket library
 
 ZWSSock is implement [ZWS (ZeroMQ WebSocket)](http://rfc.zeromq.org/spec:39) for use in ZeroMQ applications.
 
-ZWS and ZWSSock are both in early stage and protocol is not yet finalized and so this library.
+ZWS and ZWSSock are both in early stage and protocol is not yet finalized and so is this library.
 
 The API of ZWSSock is very similar to the API of zsock of CZMQ v3.0, so using it should be very simple.
 
