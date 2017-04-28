@@ -73,12 +73,12 @@ void zwsdecoder_process_buffer(zwsdecoder_t *self, zframe_t* data)
 		{
 		case error:
 			return;
-		case begin_payload:		
+		case begin_payload:
 
 			self->payload_index = 0;
 			self->payload = zmalloc(sizeof(byte) * self->payload_length);
 
-			// continue to payload			
+			// continue to payload
 		case payload:
 			bytes_to_read = self->payload_length - self->payload_index;
 
@@ -95,7 +95,7 @@ void zwsdecoder_process_buffer(zwsdecoder_t *self, zframe_t* data)
 				{
 					if (self->opcode == opcode_binary)
 					{
-						// because the first byte is the more bit we always add + 1 to the index 
+						// because the first byte is the more bit we always add + 1 to the index
 						// when retrieving the mask byte
 						self->payload[j] = self->payload[j] ^ self->mask[(j + 1) % 4];
 					}
@@ -201,7 +201,7 @@ static void zwsdecoder_process_byte(zwsdecoder_t *self, byte b)
 	case long_size:
 		self->payload_length = 0;
 
-		// must be zero, max message size is MaxInt		
+		// must be zero, max message size is MaxInt
 		if (b != 0)
 			self->state = error;
 		else
@@ -245,7 +245,7 @@ static void zwsdecoder_process_byte(zwsdecoder_t *self, byte b)
 		self->state = zwsdecoder_next_state(self);
 		break;
 	case more_byte:
-		// The first byte of the payload is the more bit                  
+		// The first byte of the payload is the more bit
 
 		if (self->is_masked)
 		{
@@ -260,11 +260,11 @@ static void zwsdecoder_process_byte(zwsdecoder_t *self, byte b)
 
 		if (self->payload_length == 0)
 		{
-			self->state = new_message;			
+			self->state = new_message;
 
 			invoke_new_message(self);
 		}
-		else		
+		else
 			self->state = begin_payload;
 
 	    break;
@@ -289,14 +289,14 @@ static state_t zwsdecoder_next_state(zwsdecoder_t *self)
 	else
 	{
 		if (self->payload_length == 0)
-		{						
+		{
 			invoke_new_message(self);
 
 			return new_message;
 		}
 		else
 			return begin_payload;
-		
+
 	}
 }
 
@@ -317,7 +317,7 @@ static void invoke_new_message(zwsdecoder_t *self)
 		self->pong_cb(self->tag, self->payload, self->payload_length);
 		break;
 	default:
-		assert(false);		
+		assert(false);
 	}
 
 	if (self->payload != NULL)
