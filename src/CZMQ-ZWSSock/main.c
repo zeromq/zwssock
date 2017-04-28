@@ -52,7 +52,9 @@ int main(int argc, char **argv)
 		zmsg_push(msg, id);
 		zmsg_addstr(msg, "hello back");
 
-		zwssock_send(sock, &msg);
+		int rc = zwssock_send(sock, &msg);
+		if (rc != 0)
+			zmsg_destroy(&msg);
 	}
 
 	zwssock_destroy(&sock);

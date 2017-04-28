@@ -63,8 +63,8 @@ int zwssock_send(zwssock_t *self, zmsg_t **msg_p)
 {
 	assert(self);
 	assert(zmsg_size(*msg_p) > 0);
-	zmsg_send(msg_p, self->data);
-	return 0;
+
+	return zmsg_send(msg_p, self->data);
 }
 
 zmsg_t * zwssock_recv(zwssock_t *self)
