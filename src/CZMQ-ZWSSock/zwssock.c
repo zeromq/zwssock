@@ -182,8 +182,6 @@ void router_message_received(void *tag, byte* payload, int length, bool more)
 {
 	client_t *self = (client_t *)tag;
 
-	assert(!more);
-
 	if (self->outgoing_msg == NULL)
 	{
 		self->outgoing_msg = zmsg_new();
