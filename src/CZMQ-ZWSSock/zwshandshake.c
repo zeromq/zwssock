@@ -364,6 +364,10 @@ zframe_t* zwshandshake_get_response(zwshandshake_t *self)
 
 	zdigest_destroy (&digest);
 
-	return zframe_new(response, response_len);
+	zframe_t *zframe_response = zframe_new(response, response_len);
+
+	free(response);
+
+	return zframe_response;
 }
 
