@@ -5,7 +5,7 @@
 static char *listen_on = "tcp://127.0.0.1:8000";
 
 int main(int argc, char **argv)
-{	
+{
 	zctx_t *ctx;
 	zwssock_t *sock;
 
@@ -27,9 +27,9 @@ int main(int argc, char **argv)
 	zframe_t *id;
 
 	while (!zctx_interrupted)
-	{		
+	{
 		msg = zwssock_recv(sock);
-		
+
 		if (!msg)
 			break;
 
@@ -41,7 +41,7 @@ int main(int argc, char **argv)
 			char * str = zmsg_popstr(msg);
 
 			printf("%s\n", str);
-			
+
 			free(str);
 		}
 
@@ -52,9 +52,11 @@ int main(int argc, char **argv)
 		zmsg_push(msg, id);
 		zmsg_addstr(msg, "hello back");
 
-		zwssock_send(sock, &msg);
+		int rc = zwssock_send(sock, &msg);
+		if (rc != 0)
+			zmsg_destroy(&msg);
 	}
-	
+
 	zwssock_destroy(&sock);
-	zctx_destroy(&ctx);	
+	zctx_destroy(&ctx);
 }

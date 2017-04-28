@@ -28,7 +28,7 @@ typedef enum
 	header_field_value,
 	header_field_cr,
 	end_line_cr,
-	complete,	
+	complete,
 
 	error = -1
 } state_t;
@@ -269,7 +269,7 @@ bool zwshandshake_parse_request(zwshandshake_t *self, zframe_t* data)
 				free(request);
 				return zwshandshake_validate(self);
 			}
-			break;		
+			break;
 		case error:
 			free(request);
 			return false;
@@ -340,9 +340,9 @@ zframe_t* zwshandshake_get_response(zwshandshake_t *self)
 
 	zdigest_t* digest = zdigest_new();
 	zdigest_update(digest, (byte *) plain, len);
-	
+
 	byte* hash = zdigest_data(digest);
-		
+
 	char accept_key[150];
 
 	int accept_key_len = encode_base64(hash, zdigest_size(digest), accept_key, 150);
@@ -354,14 +354,20 @@ zframe_t* zwshandshake_get_response(zwshandshake_t *self)
 		"Sec-WebSocket-Protocol: WSNetMQ\r\n\r\n") + accept_key_len;
 
 	char* response = zmalloc(sizeof(char) * (response_len+1));
-	
+
 	strcpy(response, "HTTP/1.1 101 Switching Protocols\r\n"
 		"Upgrade: websocket\r\n"
 		"Connection: Upgrade\r\n"
 		"Sec-WebSocket-Accept: ");
 	strncat(response, accept_key, accept_key_len);
-	strcat(response, "\r\nSec-WebSocket-Protocol: WSNetMQ\r\n\r\n");	
+	strcat(response, "\r\nSec-WebSocket-Protocol: WSNetMQ\r\n\r\n");
 
-	return zframe_new(response, response_len);
+	zdigest_destroy (&digest);
+
+	zframe_t *zframe_response = zframe_new(response, response_len);
+
+	free(response);
+
+	return zframe_response;
 }
 

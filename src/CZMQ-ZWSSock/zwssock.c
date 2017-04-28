@@ -63,8 +63,8 @@ int zwssock_send(zwssock_t *self, zmsg_t **msg_p)
 {
 	assert(self);
 	assert(zmsg_size(*msg_p) > 0);
-	zmsg_send(msg_p, self->data);
-	return 0;
+
+	return zmsg_send(msg_p, self->data);
 }
 
 zmsg_t * zwssock_recv(zwssock_t *self)
@@ -87,9 +87,9 @@ typedef struct {
 	zctx_t *ctx;                //  CZMQ context
 	void *control;              //  Control socket back to application
 	void *data;                 //  Data socket to application
-	void *stream;               //  stream socket to server		
+	void *stream;               //  stream socket to server
 	zhash_t *clients;           //  Clients known so far
-	bool terminated;            //  Agent terminated by API	
+	bool terminated;            //  Agent terminated by API
 } agent_t;
 
 static agent_t *
@@ -125,15 +125,15 @@ s_agent_destroy(agent_t **self_p)
 
 //  This section covers a single client connection
 typedef enum {
-	closed = 0,	
+	closed = 0,
 	connected = 1,              //  Ready for messages
 	exception = 2               //  Failed due to some error
 } state_t;
 
 typedef struct {
-	agent_t *agent;             //  Agent for this client	
+	agent_t *agent;             //  Agent for this client
 	state_t state;              //  Current state
-	zframe_t *address;          //  Client address identity	
+	zframe_t *address;          //  Client address identity
 	char *hashkey;              //  Key into clients hash
 	zwsdecoder_t* decoder;
 
@@ -181,7 +181,7 @@ client_destroy(client_t **self_p)
 void router_message_received(void *tag, byte* payload, int length, bool more)
 {
 	client_t *self = (client_t *)tag;
-	
+
 	assert(!more);
 
 	if (self->outgoing_msg == NULL)
@@ -189,8 +189,8 @@ void router_message_received(void *tag, byte* payload, int length, bool more)
 		self->outgoing_msg = zmsg_new();
 		zmsg_addstr(self->outgoing_msg, self->hashkey);
 	}
-		
-	zmsg_addmem(self->outgoing_msg, payload, length);	
+
+	zmsg_addmem(self->outgoing_msg, payload, length);
 
 	if (!more)
 	{
@@ -200,59 +200,59 @@ void router_message_received(void *tag, byte* payload, int length, bool more)
 
 void close_received(void *tag, byte* payload, int length)
 {
-	// TODO: close received	
+	// TODO: close received
 }
 
 void ping_received(void *tag, byte* payload, int length)
 {
-	// TODO: implement ping 	
+	// TODO: implement ping
 }
 
 void pong_received(void *tag, byte* payload, int length)
 {
-	// TOOD: implement pong	
+	// TOOD: implement pong
 }
 
 static void client_data_ready(client_t * self)
 {
 	zframe_t* data;
-	zwshandshake_t * handshake;	
-	
+	zwshandshake_t * handshake;
+
 	data = zframe_recv(self->agent->stream);
 
 	switch (self->state)
 	{
-	case closed:						
+	case closed:
 		// TODO: we might didn't receive the entire request, make the zwshandshake able to handle multiple inputs
-		
+
 		handshake = zwshandshake_new();
 		if (zwshandshake_parse_request(handshake, data))
 		{
 			// request is valid, getting the response
 			zframe_t* response = zwshandshake_get_response(handshake);
-			
+
 			zframe_t *address = zframe_dup(self->address);
-			
+
 			zframe_send(&address, self->agent->stream, ZFRAME_MORE);
-			zframe_send(&response, self->agent->stream, 0);			
+			zframe_send(&response, self->agent->stream, 0);
 
 			free(response);
 
 			self->decoder = zwsdecoder_new(self, &router_message_received, &close_received, &ping_received, &pong_received);
-			self->state = connected;			
+			self->state = connected;
 		}
 		else
 		{
 			// request is invalid
 			// TODO: return http error and send null message to close the socket
 			self->state = exception;
-		}	
-		zwshandshake_destroy(&handshake);		
-				
+		}
+		zwshandshake_destroy(&handshake);
+
 		break;
 	case connected:
 		zwsdecoder_process_buffer(self->decoder, data);
-		
+
 		if (zwsdecoder_is_errored(self->decoder))
 		{
 			self->state = exception;
@@ -316,7 +316,7 @@ s_agent_handle_router(agent_t *self)
 	char *hashkey = zframe_strhex(address);
 	client_t *client = zhash_lookup(self->clients, hashkey);
 	if (client == NULL) {
-		client = client_new(self, address);		
+		client = client_new(self, address);
 
 		zhash_insert(self->clients, hashkey, client);
 		zhash_freefn(self->clients, hashkey, client_free);
@@ -337,7 +337,7 @@ static int
 s_agent_handle_data(agent_t *self)
 {
 	//  First frame is client address (hashkey)
-	//  If caller sends unknown client address, we discard the message	
+	//  If caller sends unknown client address, we discard the message
 	//  The assert disappears when we start to timeout clients...
 	zmsg_t *request = zmsg_recv(self->data);
 	char *hashkey = zmsg_popstr(request);
@@ -345,7 +345,7 @@ s_agent_handle_data(agent_t *self)
 
 	zframe_t* address;
 
-	if (client) {		
+	if (client) {
 		//  Each frame is a full ZMQ message with identity frame
 		while (zmsg_size(request)) {
 			zframe_t *receivedFrame = zmsg_pop(request);
@@ -371,8 +371,8 @@ s_agent_handle_data(agent_t *self)
 			}
 
 			byte* outgoingData = (byte*)zmalloc(frameSize);
-			
-			outgoingData[0] = (byte)0x82; // Binary and Final      
+
+			outgoingData[0] = (byte)0x82; // Binary and Final
 
 			// No mask
 			outgoingData[1] = 0x00;
@@ -409,13 +409,13 @@ s_agent_handle_data(agent_t *self)
 
 			address = zframe_dup(client->address);
 
-			zframe_send(&address, self->stream, ZFRAME_MORE);			
+			zframe_send(&address, self->stream, ZFRAME_MORE);
 			zsocket_sendmem(self->stream, outgoingData, frameSize, 0);
 
 			free(outgoingData);
 			zframe_destroy(&receivedFrame);
 
-			// TODO: check return code, on return code different than 0 or again set exception			
+			// TODO: check return code, on return code different than 0 or again set exception
 		}
 	}
 

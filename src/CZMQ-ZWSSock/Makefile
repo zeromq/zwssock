@@ -14,7 +14,7 @@ OTMP = $(patsubst %.c,%.o,$(wildcard *.c))
 OBJS = $(patsubst %,$(OBJDIR)/%,$(OTMP))
 
 all: init $(DEPS) $(OBJS)
-	$(CC) -o $(TARGET) $(LDFLAGS) $(LIBS) $(OBJS)
+	$(CC) -o $(TARGET) $(LDFLAGS) $(OBJS) $(LIBS)
 
 init:
 	mkdir -p $(DEPDIR)
