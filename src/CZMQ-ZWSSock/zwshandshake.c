@@ -362,6 +362,8 @@ zframe_t* zwshandshake_get_response(zwshandshake_t *self)
 	strncat(response, accept_key, accept_key_len);
 	strcat(response, "\r\nSec-WebSocket-Protocol: WSNetMQ\r\n\r\n");
 
+	zdigest_destroy (&digest);
+
 	return zframe_new(response, response_len);
 }
 
