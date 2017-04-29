@@ -178,7 +178,7 @@ client_destroy(client_t **self_p)
 	}
 }
 
-void router_message_received(void *tag, byte* payload, int length, bool more)
+void router_message_received(void *tag, byte* payload, int length)
 {
 	client_t *self = (client_t *)tag;
 
@@ -188,7 +188,8 @@ void router_message_received(void *tag, byte* payload, int length, bool more)
 		zmsg_addstr(self->outgoing_msg, self->hashkey);
 	}
 
-	zmsg_addmem(self->outgoing_msg, payload, length);
+	bool more = (payload[0] == 1);
+	zmsg_addmem(self->outgoing_msg, &payload[1], length - 1);
 
 	if (!more)
 	{
