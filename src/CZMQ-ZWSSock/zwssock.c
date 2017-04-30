@@ -348,6 +348,52 @@ s_agent_handle_router(agent_t *self)
 	return 0;
 }
 
+static void
+compute_frame_header(byte header, int payloadLength, int *frameSize, int *payloadStartIndex, byte *outgoingData) {
+	*frameSize = 2 + payloadLength;
+	*payloadStartIndex = 2;
+
+	if (payloadLength > 125)
+	{
+		*frameSize += 2;
+		*payloadStartIndex += 2;
+
+		if (payloadLength > 0xFFFF) // 2 bytes max value
+		{
+			*frameSize += 6;
+			*payloadStartIndex += 6;
+		}
+	}
+
+	outgoingData[0] = header;
+
+	// No mask
+	outgoingData[1] = 0x00;
+
+	if (payloadLength <= 125)
+	{
+		outgoingData[1] |= (byte)(payloadLength & 127);
+	}
+	else if (payloadLength <= 0xFFFF) // maximum size of short
+	{
+		outgoingData[1] |= 126;
+		outgoingData[2] = (payloadLength >> 8) & 0xFF;
+		outgoingData[3] = payloadLength & 0xFF;
+	}
+	else
+	{
+		outgoingData[1] |= 127;
+		outgoingData[2] = 0;
+		outgoingData[3] = 0;
+		outgoingData[4] = 0;
+		outgoingData[5] = 0;
+		outgoingData[6] = (payloadLength >> 24) & 0xFF;
+		outgoingData[7] = (payloadLength >> 16) & 0xFF;
+		outgoingData[8] = (payloadLength >> 8) & 0xFF;
+		outgoingData[9] = payloadLength & 0xFF;
+	}
+}
+
 static int
 s_agent_handle_data(agent_t *self)
 {
@@ -369,51 +415,11 @@ s_agent_handle_data(agent_t *self)
 			if (zmsg_size(request))
 				more = true;
 
-			int frameSize = 2 + 1 + zframe_size(receivedFrame);
-			int payloadStartIndex = 2;
 			int payloadLength = zframe_size(receivedFrame) + 1;
+			byte* outgoingData = (byte*)zmalloc(payloadLength + 10); /* + 10 = max size of header */
 
-			if (payloadLength > 125)
-			{
-				frameSize += 2;
-				payloadStartIndex += 2;
-
-				if (payloadLength > 0xFFFF) // 2 bytes max value
-				{
-					frameSize += 6;
-					payloadStartIndex += 6;
-				}
-			}
-
-			byte* outgoingData = (byte*)zmalloc(frameSize);
-
-			outgoingData[0] = (byte)0x82; // Binary and Final
-
-			// No mask
-			outgoingData[1] = 0x00;
-
-			if (payloadLength <= 125)
-			{
-				outgoingData[1] |= (byte)(payloadLength & 127);
-			}
-			else if (payloadLength <= 0xFFFF) // maximum size of short
-			{
-				outgoingData[1] |= 126;
-				outgoingData[2] = (payloadLength >> 8) & 0xFF;
-				outgoingData[3] = payloadLength & 0xFF;
-			}
-			else
-			{
-				outgoingData[1] |= 127;
-				outgoingData[2] = 0;
-				outgoingData[3] = 0;
-				outgoingData[4] = 0;
-				outgoingData[5] = 0;
-				outgoingData[6] = (payloadLength >> 24) & 0xFF;
-				outgoingData[7] = (payloadLength >> 16) & 0xFF;
-				outgoingData[8] = (payloadLength >> 8) & 0xFF;
-				outgoingData[9] = payloadLength & 0xFF;
-			}
+			int frameSize, payloadStartIndex;
+			compute_frame_header(0x82, payloadLength, &frameSize, &payloadStartIndex, outgoingData); /* 0x82 = Binary and Final */
 
 			// more byte
 			outgoingData[payloadStartIndex] = (byte)(more ? 1 : 0);
