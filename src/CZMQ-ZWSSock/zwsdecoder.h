@@ -3,7 +3,7 @@
 
 #include <czmq.h>
 
-typedef void (*message_callback_t)(void *tag, byte* payload, int length, bool more);
+typedef void (*message_callback_t)(void *tag, byte* payload, int length);
 typedef void(*close_callback_t)(void *tag, byte* payload, int length);
 typedef void(*ping_callback_t)(void *tag, byte* payload, int length);
 typedef void(*pong_callback_t)(void *tag, byte* payload, int length);

@@ -9,7 +9,7 @@ typedef enum
 {
 	new_message, second_byte, short_size, short_size_2,
 	long_size, long_size_2, long_size_3, long_size_4, long_size_5, long_size_6, long_size_7, long_size_8,
-	mask, mask_2, mask_3, mask_4, more_byte, begin_payload, payload, error
+	mask, mask_2, mask_3, mask_4, begin_payload, payload, error
 } state_t;
 
 struct _zwsdecoder_t
@@ -19,7 +19,6 @@ struct _zwsdecoder_t
 	opcode_t opcode;
 	bool is_masked;
 	byte mask[4];
-	bool more;
 	byte *payload;
 	int payload_length;
 	int payload_index;
@@ -93,16 +92,7 @@ void zwsdecoder_process_buffer(zwsdecoder_t *self, zframe_t* data)
 			{
 				for (int j = self->payload_index; j < self->payload_index + bytes_to_read; j++)
 				{
-					if (self->opcode == opcode_binary)
-					{
-						// because the first byte is the more bit we always add + 1 to the index
-						// when retrieving the mask byte
-						self->payload[j] = self->payload[j] ^ self->mask[(j + 1) % 4];
-					}
-					else
-					{
-						self->payload[j] = self->payload[j] ^ self->mask[(j) % 4];
-					}
+					self->payload[j] = self->payload[j] ^ self->mask[(j) % 4];
 				}
 			}
 
@@ -244,30 +234,6 @@ static void zwsdecoder_process_byte(zwsdecoder_t *self, byte b)
 		self->payload_length |= b;
 		self->state = zwsdecoder_next_state(self);
 		break;
-	case more_byte:
-		// The first byte of the payload is the more bit
-
-		if (self->is_masked)
-		{
-			self->more = (b ^ self->mask[0]) == 1;
-		}
-		else
-		{
-			self->more = b == 1;
-		}
-
-		self->payload_length--;
-
-		if (self->payload_length == 0)
-		{
-			self->state = new_message;
-
-			invoke_new_message(self);
-		}
-		else
-			self->state = begin_payload;
-
-	    break;
 	case begin_payload:
 	case payload:
 	case error:
@@ -281,10 +247,6 @@ static state_t zwsdecoder_next_state(zwsdecoder_t *self)
 	if ((self->state == long_size_8 || self->state == second_byte || self->state == short_size_2) && self->is_masked)
 	{
 		return mask;
-	}
-	else if (self->opcode == opcode_binary)
-	{
-		return more_byte;
 	}
 	else
 	{
@@ -305,7 +267,7 @@ static void invoke_new_message(zwsdecoder_t *self)
 	switch (self->opcode)
 	{
 	case opcode_binary:
-		self->message_cb(self->tag, self->payload, self->payload_length, self->more);
+		self->message_cb(self->tag, self->payload, self->payload_length);
 		break;
 	case opcode_close:
 		self->close_cb(self->tag, self->payload, self->payload_length);

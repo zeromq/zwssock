@@ -23,6 +23,7 @@
 
         function send() {
             var message = new JSMQ.Message();
+            message.addString("extra frame");
             message.addString(document.getElementById("messageTextBox").value);
             dealer.send(message);
         }
