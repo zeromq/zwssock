@@ -330,6 +330,7 @@ zframe_t* zwshandshake_get_response(zwshandshake_t *self)
 	const char * magic_string = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
 	char * key = zhash_lookup(self->header_fields, sec_websocket_key_name);
+	if (key == NULL) return NULL;
 
 	int len = strlen(key) + strlen(magic_string);
 
