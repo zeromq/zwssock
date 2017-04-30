@@ -239,22 +239,29 @@ static void client_data_ready(client_t * self)
 		{
 			// request is valid, getting the response
 			zframe_t* response = zwshandshake_get_response(handshake);
+			if (response)
+			{
+				zframe_t *address = zframe_dup(self->address);
 
-			zframe_t *address = zframe_dup(self->address);
+				zframe_send(&address, self->agent->stream, ZFRAME_MORE);
+				zframe_send(&response, self->agent->stream, 0);
 
-			zframe_send(&address, self->agent->stream, ZFRAME_MORE);
-			zframe_send(&response, self->agent->stream, 0);
+				free(response);
 
-			free(response);
-
-			self->decoder = zwsdecoder_new(self, &router_message_received, &close_received, &ping_received, &pong_received);
-			self->state = connected;
+				self->decoder = zwsdecoder_new(self, &router_message_received, &close_received, &ping_received, &pong_received);
+				self->state = connected;
+			}
+			else
+			{
+				// request is invalid, for example the message does not contain the required headers
+				self->state = exception;
+				not_acceptable(self->address, self->agent->stream);
+			}
 		}
 		else
 		{
 			// request is invalid
 			self->state = exception;
-			not_acceptable(self->address, self->agent->stream);
 		}
 		zwshandshake_destroy(&handshake);
 
