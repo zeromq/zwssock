@@ -213,6 +213,15 @@ void pong_received(void *tag, byte* payload, int length)
 	// TOOD: implement pong
 }
 
+static void not_acceptable(zframe_t *_address, void *dest) {
+	zframe_t *address = zframe_dup(_address);
+	zframe_send(&address, dest, ZFRAME_MORE + ZFRAME_REUSE);
+	zstr_send (dest, "HTTP/1.1 406 Not Acceptable\r\n\r\n");
+
+	zframe_send(&address, dest, ZFRAME_MORE);
+	zmq_send(dest, NULL, 0, 0);
+}
+
 static void client_data_ready(client_t * self)
 {
 	zframe_t* data;
@@ -244,8 +253,8 @@ static void client_data_ready(client_t * self)
 		else
 		{
 			// request is invalid
-			// TODO: return http error and send null message to close the socket
 			self->state = exception;
+			not_acceptable(self->address, self->agent->stream);
 		}
 		zwshandshake_destroy(&handshake);
 
