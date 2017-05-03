@@ -136,6 +136,8 @@ typedef struct {
 	zframe_t *address;          //  Client address identity
 	char *hashkey;              //  Key into clients hash
 	zwsdecoder_t* decoder;
+	unsigned char client_max_window_bits; // Requested compression factor by the server for the client
+	unsigned char server_max_window_bits; // Requested compression factor by the client for the server
 
 	zmsg_t *outgoing_msg;		// Currently outgoing message, if not NULL final frame was not yet arrived
 } client_t;
@@ -150,6 +152,8 @@ client_new(agent_t *agent, zframe_t *address)
 	self->hashkey = zframe_strhex(address);
 	self->state = closed;
 	self->decoder = NULL;
+	self->client_max_window_bits = 0;
+	self->server_max_window_bits = 0;
 	self->outgoing_msg = NULL;
 	return self;
 }
@@ -237,7 +241,7 @@ static void client_data_ready(client_t * self)
 		if (zwshandshake_parse_request(handshake, data))
 		{
 			// request is valid, getting the response
-			zframe_t* response = zwshandshake_get_response(handshake);
+			zframe_t* response = zwshandshake_get_response(handshake, &self->client_max_window_bits, &self->server_max_window_bits);
 			if (response)
 			{
 				zframe_t *address = zframe_dup(self->address);
