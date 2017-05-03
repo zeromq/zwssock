@@ -4,6 +4,7 @@
 
 #include <czmq.h>
 #include <string.h>
+#include <zlib.h>
 
 struct _zwssock_t
 {
@@ -138,6 +139,8 @@ typedef struct {
 	zwsdecoder_t* decoder;
 	unsigned char client_max_window_bits; // Requested compression factor by the server for the client
 	unsigned char server_max_window_bits; // Requested compression factor by the client for the server
+	z_stream permessage_deflate_client;   // The client advertised the permessage-deflate extension
+	z_stream permessage_deflate_server;   // The client advertised the permessage-deflate extension
 
 	zmsg_t *outgoing_msg;		// Currently outgoing message, if not NULL final frame was not yet arrived
 } client_t;
@@ -152,8 +155,18 @@ client_new(agent_t *agent, zframe_t *address)
 	self->hashkey = zframe_strhex(address);
 	self->state = closed;
 	self->decoder = NULL;
-	self->client_max_window_bits = 0;
-	self->server_max_window_bits = 0;
+	self->client_max_window_bits = 10;
+	self->server_max_window_bits = 10;
+	self->permessage_deflate_client.zalloc   = Z_NULL;
+	self->permessage_deflate_client.zfree    = Z_NULL;
+	self->permessage_deflate_client.opaque   = Z_NULL;
+	self->permessage_deflate_client.avail_in = 0;
+	self->permessage_deflate_client.next_in  = Z_NULL;
+	self->permessage_deflate_server.zalloc   = Z_NULL;
+	self->permessage_deflate_server.zfree    = Z_NULL;
+	self->permessage_deflate_server.opaque   = Z_NULL;
+	self->permessage_deflate_server.avail_in = 0;
+	self->permessage_deflate_server.next_in  = Z_NULL;
 	self->outgoing_msg = NULL;
 	return self;
 }
@@ -171,6 +184,16 @@ client_destroy(client_t **self_p)
 			zwsdecoder_destroy(&self->decoder);
 		}
 
+		if (self->client_max_window_bits > 0)
+		{
+			inflateEnd(&self->permessage_deflate_client);
+		}
+
+		if (self->server_max_window_bits > 0)
+		{
+			deflateEnd(&self->permessage_deflate_server);
+		}
+
 		if (self->outgoing_msg != NULL)
 		{
 			zmsg_destroy(&self->outgoing_msg);
@@ -182,9 +205,12 @@ client_destroy(client_t **self_p)
 	}
 }
 
+#define CHUNK 8192
+
 void router_message_received(void *tag, byte* payload, int length)
 {
 	client_t *self = (client_t *)tag;
+	bool more;
 
 	if (self->outgoing_msg == NULL)
 	{
@@ -192,8 +218,60 @@ void router_message_received(void *tag, byte* payload, int length)
 		zmsg_addstr(self->outgoing_msg, self->hashkey);
 	}
 
-	bool more = (payload[0] == 1);
-	zmsg_addmem(self->outgoing_msg, &payload[1], length - 1);
+	if (self->client_max_window_bits > 0) {
+		unsigned char out[CHUNK];
+		byte* outgoingData = (byte*)zmalloc(length + 4);
+		bool more_parsed = false;
+
+		/* 7.2.2.  Decompression */
+		memcpy(outgoingData, payload, length);
+		outgoingData[length + 0] = 0x00;
+		outgoingData[length + 1] = 0x00;
+		outgoingData[length + 2] = 0xff;
+		outgoingData[length + 3] = 0xff;
+
+		self->permessage_deflate_client.avail_in = length + 4;
+		self->permessage_deflate_client.next_in = outgoingData;
+
+		do {
+			self->permessage_deflate_client.avail_out = CHUNK;
+			self->permessage_deflate_client.next_out = out;
+
+			int ret = inflate(&self->permessage_deflate_client, Z_NO_FLUSH);
+			assert(ret != Z_STREAM_ERROR);
+			switch (ret) {
+				case Z_NEED_DICT:
+					ret = Z_DATA_ERROR;
+				case Z_DATA_ERROR:
+				case Z_MEM_ERROR:
+					{
+						inflateEnd(&self->permessage_deflate_client);
+						zmsg_destroy(&self->outgoing_msg);
+
+						/* close the client connection */
+						self->state = exception;
+						zframe_t *address = zframe_dup(self->address);
+						zframe_send(&address, self->agent->stream, ZFRAME_MORE);
+						zmq_send(self->agent->stream, NULL, 0, 0);
+						return;
+					}
+			}
+			unsigned int length_inflated = CHUNK - self->permessage_deflate_client.avail_out;
+			if (!more_parsed) {
+				more_parsed = true;
+				more = (out[0] == 1);
+				zmsg_addmem(self->outgoing_msg, &out[1], length_inflated - 1);
+			} else {
+				zmsg_addmem(self->outgoing_msg, out, length_inflated);
+			}
+
+		} while (self->permessage_deflate_client.avail_out == 0);
+
+		free(outgoingData);
+	} else {
+		more = (payload[0] == 1);
+		zmsg_addmem(self->outgoing_msg, &payload[1], length - 1);
+	}
 
 	if (!more)
 	{
@@ -250,6 +328,22 @@ static void client_data_ready(client_t * self)
 				zframe_send(&response, self->agent->stream, 0);
 
 				free(response);
+
+				if (self->client_max_window_bits > 0) {
+					int ret = inflateInit2(&self->permessage_deflate_client, -self->client_max_window_bits);
+					if (ret != Z_OK) {
+						self->client_max_window_bits = 0;
+						self->state = exception;
+						not_acceptable(self->address, self->agent->stream);
+					}
+
+					ret = deflateInit2(&self->permessage_deflate_server, Z_DEFAULT_COMPRESSION, Z_DEFLATED, -self->server_max_window_bits, 8, Z_DEFAULT_STRATEGY);
+					if (ret != Z_OK) {
+						self->server_max_window_bits = 0;
+						self->state = exception;
+						not_acceptable(self->address, self->agent->stream);
+					}
+				}
 
 				self->decoder = zwsdecoder_new(self, &router_message_received, &close_received, &ping_received, &pong_received);
 				self->state = connected;
@@ -419,26 +513,71 @@ s_agent_handle_data(agent_t *self)
 			if (zmsg_size(request))
 				more = true;
 
-			int payloadLength = zframe_size(receivedFrame) + 1;
-			byte* outgoingData = (byte*)zmalloc(payloadLength + 10); /* + 10 = max size of header */
+			if (client->server_max_window_bits > 0)
+			{
+				byte byte_no_more = 0;
+				byte byte_more = 1;
 
-			int frameSize, payloadStartIndex;
-			compute_frame_header(0x82, payloadLength, &frameSize, &payloadStartIndex, outgoingData); /* 0x82 = Binary and Final */
+				int frameSize = zframe_size(receivedFrame);
 
-			// more byte
-			outgoingData[payloadStartIndex] = (byte)(more ? 1 : 0);
-			payloadStartIndex++;
+				// This assumes that a compressed message is never longer than 64 bytes plus the original message. A better assumption without realloc would be great.
+				unsigned int available = frameSize + 64 + 10;
+				byte *compressedPayload = (byte*)zmalloc(available);
+				client->permessage_deflate_server.avail_in = 1;
+				client->permessage_deflate_server.next_in  = (more ? &byte_more : &byte_no_more);
+				client->permessage_deflate_server.avail_out = available;
+				client->permessage_deflate_server.next_out = &compressedPayload[10];
 
-			// payload
-			memcpy(outgoingData + payloadStartIndex, zframe_data(receivedFrame), zframe_size(receivedFrame));
+				deflate(&client->permessage_deflate_server, Z_NO_FLUSH);
 
-			address = zframe_dup(client->address);
+				client->permessage_deflate_server.avail_in = frameSize;
+				client->permessage_deflate_server.next_in  = zframe_data(receivedFrame);
 
-			zframe_send(&address, self->stream, ZFRAME_MORE);
-			zsocket_sendmem(self->stream, outgoingData, frameSize, 0);
+				deflate(&client->permessage_deflate_server, Z_SYNC_FLUSH);
+				assert(client->permessage_deflate_server.avail_in == 0);
 
-			free(outgoingData);
-			zframe_destroy(&receivedFrame);
+				int payloadLength = available - client->permessage_deflate_server.avail_out;
+				payloadLength -= 4; /* skip the 0x00 0x00 0xff 0xff */
+
+				byte initialHeader[10];
+				int payloadStartIndex;
+				compute_frame_header((byte)0xC2, payloadLength, &frameSize, &payloadStartIndex, initialHeader); // 0xC2 = Final, RSV1, Binary
+
+				// We reserved 10 extra bytes before the compressed message, here we prepend the header before it, prevents allocation of the message and a memcpy of the compressed content
+				byte* outgoingData = &compressedPayload[10 - payloadStartIndex];
+				memcpy(outgoingData, initialHeader, payloadStartIndex);
+
+				address = zframe_dup(client->address);
+
+				zframe_send(&address, self->stream, ZFRAME_MORE);
+				zsocket_sendmem(self->stream, outgoingData, frameSize, 0);
+
+				free(compressedPayload);
+				zframe_destroy(&receivedFrame);
+            }
+			else
+			{
+				int payloadLength = zframe_size(receivedFrame) + 1;
+				byte* outgoingData = (byte*)zmalloc(payloadLength + 10); /* + 10 = max size of header */
+
+				int frameSize, payloadStartIndex;
+				compute_frame_header(0x82, payloadLength, &frameSize, &payloadStartIndex, outgoingData); /* 0x82 = Binary and Final */
+
+				// more byte
+				outgoingData[payloadStartIndex] = (byte)(more ? 1 : 0);
+				payloadStartIndex++;
+
+				// payload
+				memcpy(outgoingData + payloadStartIndex, zframe_data(receivedFrame), zframe_size(receivedFrame));
+
+				address = zframe_dup(client->address);
+
+				zframe_send(&address, self->stream, ZFRAME_MORE);
+				zsocket_sendmem(self->stream, outgoingData, frameSize, 0);
+
+				free(outgoingData);
+				zframe_destroy(&receivedFrame);
+			}
 
 			// TODO: check return code, on return code different than 0 or again set exception
 		}
