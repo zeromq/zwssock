@@ -70,6 +70,9 @@ bool zwshandshake_parse_request(zwshandshake_t *self, zframe_t* data)
 	// the parse method is not fully implemented and therefore not secured.
 	// for the purpose of ZWS prototyoe only the request-line, upgrade header and Sec-WebSocket-Key are validated.
 
+	// one of the ommissions in this parser in the fact that http-header contents may be spread over multiple lines
+	// the current implementation would only keep the last line.
+
 	char *request = zframe_strdup(data);
 	int length = strlen(request);
 
@@ -324,7 +327,7 @@ int encode_base64(uint8_t *in, int in_len, char* out, int out_len)
 
 }
 
-zframe_t* zwshandshake_get_response(zwshandshake_t *self)
+zframe_t* zwshandshake_get_response(zwshandshake_t *self, unsigned char *client_max_window_bits, unsigned char *server_max_window_bits)
 {
 	const char * sec_websocket_key_name = "sec-websocket-key";
 	const char * magic_string = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
@@ -348,26 +351,71 @@ zframe_t* zwshandshake_get_response(zwshandshake_t *self)
 
 	int accept_key_len = encode_base64(hash, zdigest_size(digest), accept_key, 150);
 
-	int response_len = strlen("HTTP/1.1 101 Switching Protocols\r\n"
-		"Upgrade: websocket\r\n"
-		"Connection: Upgrade\r\n"
-		"Sec-WebSocket-Accept: \r\n"
-		"Sec-WebSocket-Protocol: WSNetMQ\r\n\r\n") + accept_key_len;
-
-	char* response = zmalloc(sizeof(char) * (response_len+1));
-
-	strcpy(response, "HTTP/1.1 101 Switching Protocols\r\n"
-		"Upgrade: websocket\r\n"
-		"Connection: Upgrade\r\n"
-		"Sec-WebSocket-Accept: ");
-	strncat(response, accept_key, accept_key_len);
-	strcat(response, "\r\nSec-WebSocket-Protocol: WSNetMQ\r\n\r\n");
-
 	zdigest_destroy (&digest);
 
-	zframe_t *zframe_response = zframe_new(response, response_len);
+	if (accept_key_len == -1) return NULL;
 
-	free(response);
+	// this is a proof of concept implementation, similar to zwshandshake_parse_request
+	// it only implements the bare minimum to get compression going, consider it a TODO
+	// to implement a proper parsing of both HTTP Headers as sec-websocket-extensions list.
+
+	/* Implementation of permessage-deflate, client_max_window_bits and server_max_window_bits */
+	const char * sec_websocket_extensions_name = "sec-websocket-extensions";
+	bool extension_permessage_deflate = false;
+	bool extension_client_max_window_bits = false;
+	bool extension_server_max_window_bits = false;
+
+	char * key_extensions = zhash_lookup(self->header_fields, sec_websocket_extensions_name);
+	if (key_extensions && strstr(key_extensions, "permessage-deflate") != NULL &&
+		*client_max_window_bits > 0 && *server_max_window_bits > 0) {
+
+		extension_permessage_deflate = true;
+		if (strstr(key_extensions, "client_max_window_bits") != NULL) {
+			extension_client_max_window_bits = true;
+		} else {
+			*client_max_window_bits = 15;
+		}
+
+		char *server_max_window_bits = strstr(key_extensions, "server_max_window_bits=");
+		if (server_max_window_bits) {
+			extension_server_max_window_bits = true;
+
+			long int server_max_window_bits_candidate = strtol(server_max_window_bits + sizeof("server_max_window_bits="), NULL, 10);
+			if (server_max_window_bits_candidate >= 8 || server_max_window_bits_candidate <= 15) {
+				*server_max_window_bits = (unsigned char) (server_max_window_bits_candidate & 15);
+			}
+
+			/* in all other cases, we keep the value in server_max_window_bits */
+		}
+	} else {
+		*client_max_window_bits = 0;
+		*server_max_window_bits = 0;
+	}
+
+	char extension[128] = { 0 };
+
+	if (extension_permessage_deflate) {
+		if (extension_client_max_window_bits && extension_server_max_window_bits) {
+			snprintf(extension, 128, "Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits=%d; server_max_window_bits=%d\r\n", *client_max_window_bits, *server_max_window_bits);
+		} else if (extension_client_max_window_bits) {
+			snprintf(extension, 128, "Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits=%d\r\n", *client_max_window_bits);
+		} else if (extension_server_max_window_bits) {
+			snprintf(extension, 128, "Sec-WebSocket-Extensions: permessage-deflate; server_max_window_bits=%d\r\n", *server_max_window_bits);
+		} else {
+			strncpy(extension, "Sec-WebSocket-Extensions: permessage-deflate\r\n", 128);
+		}
+	}
+
+	char response[256];
+
+	int response_len = snprintf(response, 256, "HTTP/1.1 101 Switching Protocols\r\n"
+	                                           "Upgrade: websocket\r\n"
+	                                           "Connection: Upgrade\r\n"
+	                                           "Sec-WebSocket-Accept: %s\r\n"
+	                                           "Sec-WebSocket-Protocol: WSNetMQ\r\n"
+	                                           "%s\r\n", accept_key, extension);
+
+	zframe_t *zframe_response = zframe_new(response, response_len);
 
 	return zframe_response;
 }

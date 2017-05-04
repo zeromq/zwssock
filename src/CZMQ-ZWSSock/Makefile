@@ -3,9 +3,9 @@ SRCS = main.c  zwsdecoder.c  zwshandshake.c  zwssock.c
 CC = gcc
 DEBUG = -g
 MILITANT = -Werror
-CFLAGS= -std=gnu99  -Wall $(shell pkg-config --cflags libczmq) $(DEBUG) $(MILITANT)
+CFLAGS= -std=gnu99  -Wall $(shell pkg-config --cflags libczmq zlib) $(DEBUG) $(MILITANT)
 LDFLAGS = -Wall $(DEBUG)
-LIBS =  $(shell pkg-config --libs libczmq)
+LIBS =  $(shell pkg-config --libs libczmq zlib)
 
 DEPDIR=./deps
 OBJDIR=./objs

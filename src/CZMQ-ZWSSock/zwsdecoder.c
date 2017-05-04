@@ -75,7 +75,7 @@ void zwsdecoder_process_buffer(zwsdecoder_t *self, zframe_t* data)
 		case begin_payload:
 
 			self->payload_index = 0;
-			self->payload = zmalloc(sizeof(byte) * self->payload_length);
+			self->payload = zmalloc(sizeof(byte) * (self->payload_length + 4)); // +4 extra bytes in case we have to inflate it
 
 			// continue to payload
 		case payload:
