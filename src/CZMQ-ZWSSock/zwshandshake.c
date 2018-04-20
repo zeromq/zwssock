@@ -293,7 +293,7 @@ bool zwshandshake_validate(zwshandshake_t *self)
 	return true;
 }
 
-int encode_base64(uint8_t *in, int in_len, char* out, int out_len)
+int encode_base64(const uint8_t *in, int in_len, char* out, int out_len)
 {
 	static const uint8_t base64enc_tab[64] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -345,7 +345,7 @@ zframe_t* zwshandshake_get_response(zwshandshake_t *self, unsigned char *client_
 	zdigest_t* digest = zdigest_new();
 	zdigest_update(digest, (byte *) plain, len);
 
-	byte* hash = zdigest_data(digest);
+	const byte* hash = zdigest_data(digest);
 
 	char accept_key[150];
 
