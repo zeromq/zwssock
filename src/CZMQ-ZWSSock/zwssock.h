@@ -1,5 +1,6 @@
 #ifndef __ZWSSOCK_H_INCLUDED__
 #define __ZWSSOCK_H_INCLUDED__
+#define LIBCZMQ_EXPORTS
 
 #include <czmq.h>
 
@@ -10,7 +11,7 @@ extern "C" {
 
 typedef struct _zwssock_t zwssock_t;
 
-CZMQ_EXPORT zwssock_t* zwssock_new_router(zctx_t *ctx);
+CZMQ_EXPORT zwssock_t* zwssock_new_router();
 
 CZMQ_EXPORT void zwssock_destroy(zwssock_t **self_p);
 
